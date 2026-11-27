@@ -8,6 +8,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: unzip -o vex.zip
+
+      # ---- ساخت نقشه‌ی آفلاین سرپل ذهاب از داده‌ی OpenStreetMap (قانونی، مجوز ODbL) ----
+      - name: Setup JDK 21 (for Planetiler)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install osmium-tool
+        run: sudo apt-get update -y && sudo apt-get install -y osmium-tool
+      - name: Download Iran OSM extract (Geofabrik)
+        run: wget -q https://download.geofabrik.de/asia/iran-latest.osm.pbf
+      - name: Clip to Sarpol-e Zahab region
+        run: osmium extract -b 45.74,34.36,45.98,34.56 iran-latest.osm.pbf -o sarpol.osm.pbf --overwrite
+      - name: Download Planetiler
+        run: wget -q https://github.com/onthegomap/planetiler/releases/latest/download/planetiler.jar
+      - name: Build vector tiles (mbtiles)
+        run: java -Xmx6g -jar planetiler.jar --force --download --osm_path=sarpol.osm.pbf --mbtiles=sarpol.mbtiles
+      - name: Bundle map into app assets
+        run: mkdir -p assets/map && cp sarpol.mbtiles assets/map/sarpol.mbtiles && ls -lh assets/map/
+
+      # ---- ساخت اپ فلاتر ----
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
